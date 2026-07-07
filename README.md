@@ -70,7 +70,7 @@ These configuration options and secrets will be saved to `~/.openwiki/.env` on y
 
 ## Customizing
 
-OpenWiki supports OpenRouter, Fireworks, Baseten, OpenAI, an OpenAI-compatible provider, and Anthropic out of the box. By default, there are a few models pre-defined (GLM 5.2, Kimi K2.6, Sonnet 5, etc) but for each inference provider, OpenWiki will allow you to specify your own custom model ID.
+OpenWiki supports OpenRouter, Fireworks, Baseten, OpenAI, an OpenAI-compatible provider, Anthropic, and Ollama out of the box. By default, there are a few models pre-defined (GLM 5.2, Kimi K2.6, Sonnet 5, Llama 3.2, etc) but for each inference provider, OpenWiki will allow you to specify your own custom model ID.
 
 ### Alternative base URLs
 
@@ -100,5 +100,35 @@ OPENWIKI_MODEL_ID=your-gateway-model-name
 ```
 
 Base URLs (and all credentials) can be set in your environment or stored in `~/.openwiki/.env`.
+
+### Ollama
+
+The `ollama` provider talks to [Ollama](https://ollama.com) via its native
+`/api/chat` endpoint. By default it targets **Ollama Cloud** (base URL
+`https://ollama.com`, which `ChatOllama` resolves to `https://ollama.com/api/chat`),
+which requires an API key:
+
+```bash
+OPENWIKI_PROVIDER=ollama
+OLLAMA_API_KEY=your-ollama-cloud-key
+OPENWIKI_MODEL_ID=llama3.2
+```
+
+To point at a self-hosted or local Ollama server instead, override the base URL
+with `OLLAMA_BASE_URL` (the value should be the host root, without `/api/chat`):
+
+```bash
+# Local Ollama running on the default port
+OPENWIKI_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_API_KEY=local
+OPENWIKI_MODEL_ID=qwen2.5-coder
+```
+
+An `OLLAMA_API_KEY` value is always required by the CLI's credential checks;
+use any non-empty string for a local server that does not authenticate. Use any
+model name your Ollama instance exposes (e.g. `llama3.2`, `qwen2.5-coder`,
+`deepseek-coder-v2`). For a local server, pull the model first with
+`ollama pull <model>` so it is available.
 
 If there's an inference provider or model you'd like to see added, please open a PR!

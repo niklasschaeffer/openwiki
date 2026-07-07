@@ -14,6 +14,7 @@ import {
   OPENWIKI_PROVIDER_ENV_KEY,
   type OpenWikiProvider,
   providerRequiresBaseUrl,
+  providerRequiresApiKey,
   resolveConfiguredProvider,
   SELECTABLE_OPENWIKI_PROVIDERS,
 } from "./constants.js";
@@ -45,7 +46,7 @@ export function needsCredentialSetup(
 
   return (
     process.env[OPENWIKI_PROVIDER_ENV_KEY] === undefined ||
-    !process.env[apiKeyEnvKey] ||
+    (providerRequiresApiKey(provider) && !process.env[apiKeyEnvKey]) ||
     needsBaseUrlStep(provider) ||
     (modelIdOverride === null &&
       process.env[OPENWIKI_MODEL_ID_ENV_KEY] === undefined) ||
@@ -235,7 +236,7 @@ export function InitSetup({
     if (step === "api-key") {
       const trimmedInput = input.trim();
 
-      if (trimmedInput.length === 0) {
+      if (trimmedInput.length === 0 && providerRequiresApiKey(provider)) {
         setError(`${getProviderApiKeyEnvKey(provider)} is required.`);
         return;
       }
@@ -457,6 +458,7 @@ export function InitSetup({
         <SetupStep
           label="Provider key"
           state={
+            !providerRequiresApiKey(provider) ||
             process.env[getProviderApiKeyEnvKey(provider)]
               ? "done"
               : step === "api-key"
@@ -464,9 +466,11 @@ export function InitSetup({
                 : "pending"
           }
           detail={
-            process.env[getProviderApiKeyEnvKey(provider)]
-              ? "available from environment"
-              : `save ${getProviderApiKeyEnvKey(provider)} to ${openWikiEnvPath}`
+            !providerRequiresApiKey(provider)
+              ? "not required for this provider"
+              : process.env[getProviderApiKeyEnvKey(provider)]
+                ? "available from environment"
+                : `save ${getProviderApiKeyEnvKey(provider)} to ${openWikiEnvPath}`
           }
         />
         {providerRequiresBaseUrl(provider) ? (
@@ -651,6 +655,16 @@ function Prompt({
   }
 
   if (step === "api-key") {
+    if (!providerRequiresApiKey(provider)) {
+      return (
+        <Box flexDirection="column">
+          <Text>
+            {getProviderLabel(provider)} does not require an API key. Press
+            Enter to continue.
+          </Text>
+        </Box>
+      );
+    }
     return (
       <Box flexDirection="column">
         <Text>Paste your {getProviderLabel(provider)} API key.</Text>
@@ -750,7 +764,10 @@ function getInitialStep(
     return "provider";
   }
 
-  if (!process.env[getProviderApiKeyEnvKey(provider)]) {
+  if (
+    providerRequiresApiKey(provider) &&
+    !process.env[getProviderApiKeyEnvKey(provider)]
+  ) {
     return "api-key";
   }
 
@@ -776,7 +793,10 @@ function getNextStepAfterProvider(
   provider: OpenWikiProvider,
   modelIdOverride: string | null,
 ): PromptStep | null {
-  if (!process.env[getProviderApiKeyEnvKey(provider)]) {
+  if (
+    providerRequiresApiKey(provider) &&
+    !process.env[getProviderApiKeyEnvKey(provider)]
+  ) {
     return "api-key";
   }
 
