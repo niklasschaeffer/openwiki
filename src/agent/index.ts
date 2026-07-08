@@ -8,6 +8,7 @@ import { ChatOpenRouter } from "@langchain/openrouter";
 import { createDeepAgent, LocalShellBackend } from "deepagents";
 import { DEBUG_ENV_KEYS, loadOpenWikiEnv, openWikiEnvDir } from "../env.js";
 import { isFileNotFoundError } from "../fs-errors.js";
+import { ChatOllamaCompatible } from "./ollama.js";
 import { createSystemPrompt, createUserPrompt } from "./prompt.js";
 import type {
   OpenWikiCommand,
@@ -27,10 +28,13 @@ import {
   OPENROUTER_API_KEY_ENV_KEY,
   OPENROUTER_BASE_URL,
   OPENROUTER_FALLBACK_MODEL_IDS,
+  OLLAMA_API_KEY_ENV_KEY,
+  OLLAMA_BASE_URL_ENV_KEY,
   OPENWIKI_MODEL_ID_ENV_KEY,
   OPENWIKI_PROVIDER_ENV_KEY,
   providerRequiresBaseUrl,
   resolveConfiguredProvider,
+  providerRequiresApiKey,
   resolveProviderBaseUrl,
   type OpenWikiProvider,
 } from "../constants.js";
@@ -366,7 +370,7 @@ function emitDebug(options: OpenWikiRunOptions, message: string): void {
 function ensureProviderKey(provider: OpenWikiProvider): void {
   const apiKeyEnvKey = getProviderApiKeyEnvKey(provider);
 
-  if (!process.env[apiKeyEnvKey]) {
+  if (providerRequiresApiKey(provider) && !process.env[apiKeyEnvKey]) {
     throw new Error(
       `${apiKeyEnvKey} is required to run OpenWiki with ${getProviderLabel(provider)}.`,
     );
@@ -426,6 +430,17 @@ function createModel(provider: OpenWikiProvider, modelId: string) {
       models,
       route: "fallback",
       siteName: "OpenWiki",
+    });
+  }
+
+  if (provider === "ollama") {
+    const baseURL = resolveProviderBaseUrl(provider);
+    const apiKey = process.env[OLLAMA_API_KEY_ENV_KEY];
+
+    return new ChatOllamaCompatible({
+      model: modelId,
+      baseUrl: baseURL,
+      ...(apiKey ? { apiKey } : {}),
     });
   }
 

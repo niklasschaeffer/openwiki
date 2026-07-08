@@ -39,6 +39,7 @@ import {
   OPENWIKI_MODEL_ID_ENV_KEY,
   OPEN_WIKI_DIR,
   resolveConfiguredProvider,
+  providerRequiresApiKey,
   SELECTABLE_OPENWIKI_PROVIDERS,
   OPENWIKI_VERSION,
   type OpenWikiProvider,
@@ -238,7 +239,11 @@ function App({ command }: AppProps) {
 
     const apiKeyEnvKey = getProviderApiKeyEnvKey(sessionProvider);
 
-    if (!process.env[apiKeyEnvKey] && !process.stdin.isTTY) {
+    if (
+      providerRequiresApiKey(sessionProvider) &&
+      !process.env[apiKeyEnvKey] &&
+      !process.stdin.isTTY
+    ) {
       setRunState({
         status: "error",
         message: `${apiKeyEnvKey} is required. Run openwiki in an interactive terminal to save credentials.`,
@@ -1504,7 +1509,7 @@ function ChatInput({
 
     if (provider === null) {
       setError(
-        "Enter a valid provider: openrouter, baseten, fireworks, openai, or anthropic.",
+        "Enter a valid provider: openrouter, baseten, fireworks, openai, openai-compatible, anthropic, or ollama.",
       );
       return;
     }
@@ -1517,9 +1522,13 @@ function ChatInput({
       await onProviderSelect(provider);
       resetInput();
       setNotice(
-        `Provider switched to ${getProviderLabel(provider)} with model ${getDefaultModelId(
-          provider,
-        )}. Ensure ${getProviderApiKeyEnvKey(provider)} is set.`,
+        providerRequiresApiKey(provider)
+          ? `Provider switched to ${getProviderLabel(provider)} with model ${getDefaultModelId(
+              provider,
+            )}. Ensure ${getProviderApiKeyEnvKey(provider)} is set.`
+          : `Provider switched to ${getProviderLabel(provider)} with model ${getDefaultModelId(
+              provider,
+            )}.`,
       );
     } catch (saveError) {
       setError(
@@ -3059,7 +3068,9 @@ function resolveStartupCommand(command: CliCommand): CliCommand {
   ) {
     const provider = resolveConfiguredProvider();
     const apiKeyEnvKey = getProviderApiKeyEnvKey(provider);
-    const hasProviderKey = Boolean(process.env[apiKeyEnvKey]);
+    const requiresApiKey = providerRequiresApiKey(provider);
+    const hasProviderKey =
+      !requiresApiKey || Boolean(process.env[apiKeyEnvKey]);
 
     if (!hasProviderKey) {
       return {

@@ -8,6 +8,8 @@ export const OPENAI_COMPATIBLE_BASE_URL_ENV_KEY = "OPENAI_COMPATIBLE_BASE_URL";
 export const ANTHROPIC_API_KEY_ENV_KEY = "ANTHROPIC_API_KEY";
 export const ANTHROPIC_BASE_URL_ENV_KEY = "ANTHROPIC_BASE_URL";
 export const OPENROUTER_API_KEY_ENV_KEY = "OPENROUTER_API_KEY";
+export const OLLAMA_API_KEY_ENV_KEY = "OLLAMA_API_KEY";
+export const OLLAMA_BASE_URL_ENV_KEY = "OLLAMA_BASE_URL";
 export const OPENWIKI_PROVIDER_ENV_KEY = "OPENWIKI_PROVIDER";
 export const OPENWIKI_MODEL_ID_ENV_KEY = "OPENWIKI_MODEL_ID";
 export const DEFAULT_PROVIDER = "openrouter";
@@ -19,7 +21,8 @@ export type OpenWikiProvider =
   | "fireworks"
   | "openai"
   | "openai-compatible"
-  | "openrouter";
+  | "openrouter"
+  | "ollama";
 
 export type SelectableOpenWikiProvider = OpenWikiProvider;
 
@@ -41,6 +44,11 @@ type ProviderConfig = {
    * be supplied via {@link ProviderConfig.baseUrlEnvKey}.
    */
   requiresBaseUrl?: boolean;
+  /**
+   * When false, the provider does not require an API key to run (e.g. a
+   * local Ollama instance). Defaults to true when unset.
+   */
+  requiresApiKey?: boolean;
   label: string;
   modelOptions: ProviderModelOption[];
 };
@@ -52,6 +60,7 @@ export const SELECTABLE_OPENWIKI_PROVIDERS = [
   "openai",
   "openai-compatible",
   "anthropic",
+  "ollama",
 ] as const satisfies readonly SelectableOpenWikiProvider[];
 
 export const PROVIDER_CONFIGS: Record<OpenWikiProvider, ProviderConfig> = {
@@ -115,6 +124,16 @@ export const PROVIDER_CONFIGS: Record<OpenWikiProvider, ProviderConfig> = {
       { id: "openai/gpt-5.5", label: "GPT 5.5" },
     ],
   },
+  ollama: {
+    apiKeyEnvKey: OLLAMA_API_KEY_ENV_KEY,
+    baseUrlEnvKey: OLLAMA_BASE_URL_ENV_KEY,
+    baseURL: "https://ollama.com",
+    label: "Ollama",
+    modelOptions: [
+      { id: "llama3.2", label: "Llama 3.2" },
+      { id: "qwen2.5-coder", label: "Qwen 2.5 Coder" },
+    ],
+  },
 };
 
 export const DEFAULT_MODEL_ID =
@@ -166,6 +185,10 @@ export function getProviderBaseUrlEnvKey(
   provider: OpenWikiProvider,
 ): string | undefined {
   return getProviderConfig(provider).baseUrlEnvKey;
+}
+
+export function providerRequiresApiKey(provider: OpenWikiProvider): boolean {
+  return getProviderConfig(provider).requiresApiKey !== false;
 }
 
 export function providerRequiresBaseUrl(provider: OpenWikiProvider): boolean {
