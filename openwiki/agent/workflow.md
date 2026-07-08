@@ -12,7 +12,7 @@ The documentation agent is implemented in `src/agent/`. It takes a command (`cha
 4. Create a run context from Git state and prior update metadata.
 5. Snapshot the current `openwiki/` content hash (before the run).
 6. Build the system prompt and user prompt.
-7. Create the provider-specific model client (`ChatAnthropic`, `ChatOpenRouter`, or `ChatOpenAI`).
+7. Create the provider-specific model client (`ChatAnthropic`, `ChatOpenRouter`, `ChatOllamaCompatible`, or `ChatOpenAI`).
 8. Create a DeepAgents `LocalShellBackend` rooted at the repository with a SQLite checkpointer.
 9. Stream messages and tool events back to the CLI.
 10. For `init` and `update`, compare the post-run content snapshot to the pre-run snapshot. Write `openwiki/.last-update.json` **only if the content changed**.
@@ -25,6 +25,7 @@ Chat runs skip metadata writes entirely.
 
 - **anthropic**: `new ChatAnthropic(modelId, { apiKey, anthropicApiUrl? })` — uses `@langchain/anthropic` directly. When `ANTHROPIC_BASE_URL` is set, the resolved alternative base URL is passed as `anthropicApiUrl` so requests can be routed to a self-hosted or proxied Anthropic-compatible endpoint instead of the default API.
 - **openrouter**: `new ChatOpenRouter({ apiKey, baseURL, model, models, route: "fallback", siteName: "OpenWiki" })` — passes a fallback model list so OpenRouter can route around server-side failures.
+- **ollama**: `new ChatOllamaCompatible({ model, baseUrl, apiKey? })` — uses `@langchain/ollama` pointed at the resolved Ollama base URL (default `https://ollama.com`, overridable via `OLLAMA_BASE_URL`). `ChatOllamaCompatible` (in `src/agent/ollama.ts`) subclasses `ChatOllama` to coerce non-string `ToolMessage` content into strings before streaming, which is needed because some Ollama-compatible gateways return tool messages with array content that the upstream chat model rejects.
 - **baseten / fireworks / openai / openai-compatible**: `new ChatOpenAI({ apiKey, configuration: { baseURL? }, model })` — OpenAI-compatible clients using the provider's base URL when configured. The `openai-compatible` provider has no default endpoint; its base URL is user-supplied via `OPENAI_COMPATIBLE_BASE_URL` and required (`requiresBaseUrl: true`), which lets OpenWiki target any OpenAI-compatible gateway (for example a LiteLLM gateway fronting upstream providers).
 
 Base URLs are resolved through `resolveProviderBaseUrl()` in `src/constants.ts`, which prefers a provider's alternative base URL environment variable (`baseUrlEnvKey`) over the built-in default before falling back to the SDK's own default endpoint. Providers marked `requiresBaseUrl` are validated at startup by `ensureProviderBaseUrl()`.
@@ -105,6 +106,7 @@ The agent is not just a generic chat wrapper. It is intentionally constrained so
 ## Source map
 
 - `src/agent/index.ts`
+- `src/agent/ollama.ts` — `ChatOllamaCompatible` wrapper that coerces tool-message content for Ollama-compatible endpoints.
 - `src/agent/prompt.ts`
 - `src/agent/utils.ts`
 - `src/agent/types.ts`

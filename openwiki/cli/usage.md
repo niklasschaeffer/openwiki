@@ -43,8 +43,8 @@ The UI persists provider and model selection back to `~/.openwiki/.env` through 
 
 The first interactive run can prompt for:
 
-- a **provider** (`OPENWIKI_PROVIDER`) — openrouter, baseten, fireworks, openai, openai-compatible, or anthropic,
-- the **provider API key** (e.g. `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `ANTHROPIC_API_KEY`, `BASETEN_API_KEY`, `FIREWORKS_API_KEY`),
+- a **provider** (`OPENWIKI_PROVIDER`) — openrouter, baseten, fireworks, openai, openai-compatible, anthropic, or ollama,
+- the **provider API key** (e.g. `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `ANTHROPIC_API_KEY`, `BASETEN_API_KEY`, `FIREWORKS_API_KEY`, `OLLAMA_API_KEY` — the ollama provider does not require an API key, so the key prompt is skipped for it),
 - a **base URL** for providers that require one (the openai-compatible provider prompts for `OPENAI_COMPATIBLE_BASE_URL`),
 - a **model ID** stored as `OPENWIKI_MODEL_ID` — chosen from the provider's model list or a custom ID,
 - optional `LANGSMITH_API_KEY` for tracing.
@@ -65,6 +65,7 @@ Providers and their model options are defined in `PROVIDER_CONFIGS` in `src/cons
 | openai            | `OPENAI_API_KEY`            | (default)                               | GPT 5.4 mini, GPT 5.5                                                 |
 | openai-compatible | `OPENAI_COMPATIBLE_API_KEY` | `OPENAI_COMPATIBLE_BASE_URL` (required) | custom model ID only                                                  |
 | anthropic         | `ANTHROPIC_API_KEY`         | (default, or `ANTHROPIC_BASE_URL`)      | Haiku, Sonnet, Opus                                                   |
+| ollama            | `OLLAMA_API_KEY` (optional) | `https://ollama.com`, or `OLLAMA_BASE_URL` | Llama 3.2, Qwen 2.5 Coder                                        |
 
 The default provider is `openrouter`. `resolveConfiguredProvider()` picks the provider from `OPENWIKI_PROVIDER`, falling back to openrouter if `OPENROUTER_API_KEY` is set, then to `DEFAULT_PROVIDER`.
 
@@ -97,6 +98,17 @@ OPENWIKI_MODEL_ID=<model name the gateway exposes>
 
 Base URLs are resolved by `resolveProviderBaseUrl()` in `src/constants.ts`, which
 prefers a provider's `baseUrlEnvKey` override over the built-in default.
+
+### Ollama provider
+
+The `ollama` provider targets Ollama Cloud's `/api/chat` endpoint by default
+(`https://ollama.com`) and can be redirected to any other Ollama-compatible
+endpoint (for example a self-hosted instance) via `OLLAMA_BASE_URL`. The
+provider does not require an API key (`requiresApiKey: false` in
+`PROVIDER_CONFIGS`); when `OLLAMA_API_KEY` is set it is forwarded to the
+`ChatOllamaCompatible` client. Suggested model IDs are `llama3.2` and
+`qwen2.5-coder`, and any custom model name can be supplied through
+`OPENWIKI_MODEL_ID` or the interactive setup's "custom model ID" option.
 
 ## Help text and validation
 

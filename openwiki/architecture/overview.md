@@ -6,11 +6,12 @@ OpenWiki has a small but layered architecture:
 2. `src/commands.ts` parses argv and defines help text and supported options.
 3. `src/credentials.tsx` manages interactive onboarding for provider selection, API keys, model selection, and optional LangSmith tracing.
 4. `src/env.ts` reads and writes `~/.openwiki/.env` and surfaces credential diagnostics for all supported providers.
-5. `src/agent/index.ts` runs the documentation agent, resolves the provider, creates the appropriate model client, collects Git context, and writes update metadata.
-6. `src/agent/prompt.ts` builds the system and user prompts that tell the model how to behave.
-7. `src/agent/utils.ts` gathers Git evidence, computes an OpenWiki content snapshot, and records `.last-update.json` after successful init/update runs.
-8. `src/constants.ts` centralizes provider configs, model options, environment keys, validation helpers, and the wiki directory names.
-9. `src/agent/types.ts` defines shared types: `OpenWikiCommand`, `RunContext`, `UpdateMetadata`, and run option/event interfaces.
+5. `src/agent/index.ts` runs the documentation agent, resolves the provider, creates the appropriate model client (including the `ChatOllamaCompatible` wrapper for the ollama provider), collects Git context, and writes update metadata.
+6. `src/agent/ollama.ts` exposes `ChatOllamaCompatible`, a thin `ChatOllama` subclass that coerces non-string `ToolMessage` content for Ollama-compatible endpoints.
+7. `src/agent/prompt.ts` builds the system and user prompts that tell the model how to behave.
+8. `src/agent/utils.ts` gathers Git evidence, computes an OpenWiki content snapshot, and records `.last-update.json` after successful init/update runs.
+9. `src/constants.ts` centralizes provider configs, model options, environment keys, validation helpers, and the wiki directory names.
+10. `src/agent/types.ts` defines shared types: `OpenWikiCommand`, `RunContext`, `UpdateMetadata`, and run option/event interfaces.
 
 ## Runtime shape
 
@@ -42,6 +43,7 @@ Model creation branches by provider in `src/agent/index.ts` (`createModel`):
 
 - **anthropic** → `ChatAnthropic` with the Anthropic API key.
 - **openrouter** → `ChatOpenRouter` with `route: "fallback"` and a list of fallback models.
+- **ollama** → `ChatOllamaCompatible` (in `src/agent/ollama.ts`) with the resolved Ollama base URL and optional `OLLAMA_API_KEY`.
 - **baseten / fireworks / openai** → `ChatOpenAI` with the provider's API key and optional custom `baseURL` from `PROVIDER_CONFIGS`.
 
 ### DeepAgents backend
@@ -92,6 +94,7 @@ The current design reflects a documentation product rather than a general-purpos
 - `src/credentials.tsx`
 - `src/env.ts`
 - `src/agent/index.ts`
+- `src/agent/ollama.ts`
 - `src/agent/prompt.ts`
 - `src/agent/utils.ts`
 - `src/agent/types.ts`
