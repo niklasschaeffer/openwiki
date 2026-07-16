@@ -112,6 +112,20 @@ describe("synchronizeWikiIndexes", () => {
     expect(index).not.toContain("undefined");
   });
 
+  test("indexes a file without front matter using its filename", async () => {
+    const { backend, rootDir } = await setup();
+    await backend.write("/openwiki/api.md", "# API Reference\n\nContent.\n");
+
+    await synchronizeWikiIndexes(backend, "repository");
+
+    const index = await readFile(
+      path.join(rootDir, "openwiki/index.md"),
+      "utf8",
+    );
+    expect(index).toContain("- [api](api.md)\n");
+    expect(index).not.toContain("undefined");
+  });
+
   test("parses quoted and folded YAML descriptions", async () => {
     const { backend, rootDir } = await setup();
     await backend.write(

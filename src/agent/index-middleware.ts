@@ -165,13 +165,15 @@ function renderLinks(
   return `# ${heading}\n\n${items.join("\n")}`;
 }
 
-/** Parses the optional title and description from YAML front matter. */
+/** Parses the optional title and description from YAML front matter.
+ *  Files without front matter are tolerated (empty metadata returned) so the
+ *  index sync never crashes on wiki pages the agent wrote without it. */
 function parseFrontmatter(
   content: string,
   filePath: string,
 ): { description?: string; title?: string } {
   const block = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/u.exec(content)?.[1];
-  if (!block) throw new Error(`${filePath} lacks YAML front matter.`);
+  if (!block) return {};
 
   let fields: unknown;
   try {
