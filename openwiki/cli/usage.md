@@ -1,3 +1,10 @@
+---
+type: CLI reference
+title: OpenWiki CLI usage
+description: Reference for OpenWiki command-line usage, including interactive and non-interactive runs, initialization and update modes, connector operations, and authentication setup. Covers provider configuration, model selection, validation, and the source files to update when changing CLI behavior.
+tags: [openwiki, cli, commands, configuration, authentication]
+---
+
 # CLI usage
 
 OpenWiki ships as a single `openwiki` binary and is intended to work both as an interactive terminal app and as a one-shot documentation runner.
@@ -8,22 +15,36 @@ From `src/commands.ts` and `README.md`, the supported entry patterns are:
 
 - `openwiki` — open the interactive chat UI.
 - `openwiki "message"` — send a chat message immediately, then stay open.
-- `openwiki --init [message]` — generate initial OpenWiki documentation.
+- `openwiki personal --init [message]` — generate initial local personal brain wiki documentation.
+- `openwiki code --init [message]` — generate initial repository documentation.
 - `openwiki --update [message]` — refresh existing OpenWiki documentation.
 - `openwiki -p, --print` — run once and print the final assistant output (non-interactive).
 - `openwiki --modelId <id>` / `--model-id <id>` — choose a model ID for the run.
 - `openwiki --help` / `-h` — print usage, options, and examples.
 - `openwiki --dry-run` — development-only option that avoids invoking the agent.
 
+### Connector and operational subcommands
+
+- `openwiki auth <provider>` — run OAuth login for a connector provider (gmail, notion, slack, x).
+- `openwiki auth configure <provider> [--force]` — create local connector config that references saved auth env vars.
+- `openwiki auth tools <provider>` — list available MCP tools for a connector (e.g. notion).
+- `openwiki auth` (no provider) — list supported auth providers and their status.
+- `openwiki ngrok start [url] [--port <port>]` — start an ngrok HTTPS tunnel for Slack OAuth callback.
+- `openwiki cron list` — show saved connector schedules, launchd state, and the Mac wake window.
+- `openwiki cron pause <source|all>` — unload launchd job(s), keep cron metadata, reconcile `pmset` wake window.
+- `openwiki cron resume <source|all>` — reinstall paused launchd job(s) and reconcile `pmset` wake window.
+- `openwiki cron delete <source|all>` — unload and remove schedule metadata (does not remove auth, config, raw data, or wiki content).
+- `openwiki ingest [target]` — run source-specific ingestion for configured connectors.
+
 The parser rejects incompatible combinations such as `--init` and `--update` together, and it requires a message or command when `--print` is used.
 
 ### Auto-exit for init/update
 
-When `--init` or `--update` is run in a TTY (without `--print`), the CLI starts the run, streams agent output, and **exits automatically on success** (`shouldAutoExitStartupRun` in `src/cli.tsx`). This means `openwiki --init` behaves like a one-shot command while still showing a live UI. Chat runs and `--print` runs are not affected — chat stays open for follow-ups, and `--print` writes to stdout and exits.
+When explicit init (`openwiki personal --init` or `openwiki code --init`) or `--update` is run in a TTY (without `--print`), the CLI starts the run, streams agent output, and **exits automatically on success** (`shouldAutoExitStartupRun` in `src/cli.tsx`). Chat runs and `--print` runs are not affected — chat stays open for follow-ups, and `--print` writes to stdout and exits.
 
 ### Non-interactive mode
 
-If stdin is not a TTY (e.g. CI), or `--print` is used, the CLI requires a provider API key to be already saved in `~/.openwiki/.env` or present in the environment. It will error with a clear message if the key is missing, rather than prompting interactively.
+If stdin is not a TTY (e.g. CI), or `--print` is used, the CLI requires the provider's credentials to be already saved in `~/.openwiki/.env` or present in the environment — the provider API key, or `GOOGLE_CLOUD_PROJECT` for the vertex provider. It will error with a clear message if the value is missing, rather than prompting interactively.
 
 ## Interactive behavior
 
@@ -43,8 +64,8 @@ The UI persists provider and model selection back to `~/.openwiki/.env` through 
 
 The first interactive run can prompt for:
 
-- a **provider** (`OPENWIKI_PROVIDER`) — openrouter, baseten, fireworks, openai, openai-compatible, anthropic, or ollama,
-- the **provider API key** (e.g. `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `ANTHROPIC_API_KEY`, `BASETEN_API_KEY`, `FIREWORKS_API_KEY`, `OLLAMA_API_KEY` — the ollama provider does not require an API key, so the key prompt is skipped for it),
+- a **provider** (`OPENWIKI_PROVIDER`) — openai, openai-chatgpt, openrouter, baseten, fireworks, nvidia, openai-compatible, anthropic, or vertex,
+- the **provider API key** (e.g. `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`, `ANTHROPIC_API_KEY`, `BASETEN_API_KEY`, `FIREWORKS_API_KEY`) — skipped for the vertex provider, which instead prompts for a **GCP project** (`GOOGLE_CLOUD_PROJECT`, required) and a **GCP location** (`GOOGLE_CLOUD_LOCATION`, optional, defaults to `global`),
 - a **base URL** for providers that require one (the openai-compatible provider prompts for `OPENAI_COMPATIBLE_BASE_URL`),
 - a **model ID** stored as `OPENWIKI_MODEL_ID` — chosen from the provider's model list or a custom ID,
 - optional `LANGSMITH_API_KEY` for tracing.
@@ -57,17 +78,30 @@ If a LangSmith key is provided, onboarding also enables `LANGCHAIN_PROJECT=openw
 
 Providers and their model options are defined in `PROVIDER_CONFIGS` in `src/constants.ts`:
 
-| Provider          | Env key                     | Base URL                                | Models                                                                |
-| ----------------- | --------------------------- | --------------------------------------- | --------------------------------------------------------------------- |
-| openrouter        | `OPENROUTER_API_KEY`        | `https://openrouter.ai/api/v1`          | GLM 5.2, Fusion, Kimi K2.7 Code, Claude Opus/Sonnet, GPT 5.4 mini/5.5 |
-| baseten           | `BASETEN_API_KEY`           | `https://inference.baseten.co/v1`       | GLM 5.2, Kimi K2.7 Code                                               |
-| fireworks         | `FIREWORKS_API_KEY`         | `https://api.fireworks.ai/inference/v1` | GLM 5.2, Kimi K2.7 Code                                               |
-| openai            | `OPENAI_API_KEY`            | (default)                               | GPT 5.4 mini, GPT 5.5                                                 |
-| openai-compatible | `OPENAI_COMPATIBLE_API_KEY` | `OPENAI_COMPATIBLE_BASE_URL` (required) | custom model ID only                                                  |
-| anthropic         | `ANTHROPIC_API_KEY`         | (default, or `ANTHROPIC_BASE_URL`)      | Haiku, Sonnet, Opus                                                   |
-| ollama            | `OLLAMA_API_KEY` (optional) | `https://ollama.com`, or `OLLAMA_BASE_URL` | Llama 3.2, Qwen 2.5 Coder                                        |
+| Provider          | Env key                                             | Base URL                                       | Models                                                                |
+| ----------------- | --------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------- |
+| openai            | `OPENAI_API_KEY`                                    | (default)                                      | 5.6 Terra, 5.6 Luna, 5.6 Sol, 5.5, 5.4 mini                           |
+| openai-chatgpt    | `OPENAI_CHATGPT_ACCESS_TOKEN`                       | (Codex backend)                                | Same as openai (OAuth login, no API key)                              |
+| openrouter        | `OPENROUTER_API_KEY`                                | `https://openrouter.ai/api/v1`                 | GLM 5.2, Fusion, Kimi K2.7 Code, Claude Opus/Sonnet, GPT 5.4 mini/5.5 |
+| baseten           | `BASETEN_API_KEY`                                   | `https://inference.baseten.co/v1`              | GLM 5.2, Kimi K2.7 Code                                               |
+| fireworks         | `FIREWORKS_API_KEY`                                 | `https://api.fireworks.ai/inference/v1`        | GLM 5.2, Kimi K2.7 Code                                               |
+| nvidia            | `NVIDIA_API_KEY`                                    | `https://integrate.api.nvidia.com/v1`          | Nemotron 3 Super/Ultra/Nano, DeepSeek V4 Pro, GPT-OSS 120B, Kimi K2.6 |
+| openai-compatible | `OPENAI_COMPATIBLE_API_KEY`                         | `OPENAI_COMPATIBLE_BASE_URL` (required)        | custom model ID only                                                  |
+| anthropic         | `ANTHROPIC_API_KEY`                                 | (default, or `ANTHROPIC_BASE_URL`)             | Haiku, Sonnet, Opus                                                   |
+| vertex            | none (Google ADC) — `GOOGLE_CLOUD_PROJECT` required | per `GOOGLE_CLOUD_LOCATION` (default `global`) | Haiku, Sonnet, Opus (Claude on Vertex AI)                             |
 
-The default provider is `openrouter`. `resolveConfiguredProvider()` picks the provider from `OPENWIKI_PROVIDER`, falling back to openrouter if `OPENROUTER_API_KEY` is set, then to `DEFAULT_PROVIDER`.
+The default provider is `openai`, and the default model is `gpt-5.6-terra`. `resolveConfiguredProvider()` picks the provider from `OPENWIKI_PROVIDER`, then falls back to the first configured provider API key in this order: OpenAI, OpenAI-compatible, OpenRouter, Anthropic, Baseten, Fireworks, NVIDIA, and finally `DEFAULT_PROVIDER`.
+
+### Provider retry attempts
+
+Set `OPENWIKI_PROVIDER_RETRY_ATTEMPTS` to override the number of retries after
+the first provider request. The value must be a positive integer:
+
+```bash
+OPENWIKI_PROVIDER_RETRY_ATTEMPTS=3
+```
+
+If the value is unset, OpenWiki defaults to 3 retries.
 
 ### Alternative base URLs
 
@@ -99,32 +133,40 @@ OPENWIKI_MODEL_ID=<model name the gateway exposes>
 Base URLs are resolved by `resolveProviderBaseUrl()` in `src/constants.ts`, which
 prefers a provider's `baseUrlEnvKey` override over the built-in default.
 
-### Ollama provider
+### Google Vertex AI (Claude) provider
 
-The `ollama` provider targets Ollama Cloud's `/api/chat` endpoint by default
-(`https://ollama.com`) and can be redirected to any other Ollama-compatible
-endpoint (for example a self-hosted instance) via `OLLAMA_BASE_URL`. The
-provider does not require an API key (`requiresApiKey: false` in
-`PROVIDER_CONFIGS`); when `OLLAMA_API_KEY` is set it is forwarded to the
-`ChatOllamaCompatible` client. Suggested model IDs are `llama3.2` and
-`qwen2.5-coder`, and any custom model name can be supplied through
-`OPENWIKI_MODEL_ID` or the interactive setup's "custom model ID" option.
+The `vertex` provider runs Claude models through Google Vertex AI using the
+existing `ChatAnthropic` class with a custom `AnthropicVertex` client
+(`@anthropic-ai/vertex-sdk`). It has **no API key**: authentication uses Google
+Application Default Credentials (a service account key via
+`GOOGLE_APPLICATION_CREDENTIALS`, `gcloud auth application-default login`, or
+workload identity). `GOOGLE_CLOUD_PROJECT` is required;
+`GOOGLE_CLOUD_LOCATION` is optional and defaults to `global` (resolved by
+`resolveProviderLocation()` in `src/constants.ts`).
+
+```bash
+OPENWIKI_PROVIDER=vertex
+GOOGLE_CLOUD_PROJECT=<gcp project id>
+GOOGLE_CLOUD_LOCATION=global   # optional
+```
+
+Vertex Claude model IDs may carry an `@`-versioned suffix (for example
+`claude-haiku-4-5@20251001`), which the model-ID validator accepts.
 
 ## Help text and validation
 
 The help content is centralized in `src/commands.ts` and is used by the CLI UI. Model validation is intentionally strict:
 
 - model IDs are trimmed,
-- they must match the allowed character pattern (`/^[A-Za-z0-9][A-Za-z0-9._:/+-]*$/u`),
-- URLs are rejected,
-- fallback models for OpenRouter are defined in `OPENROUTER_FALLBACK_MODEL_IDS` in `src/constants.ts`.
+- they must match the allowed character pattern (`/^[A-Za-z0-9][A-Za-z0-9._:/@+-]*$/u`),
+- URLs are rejected.
 
 ## What to change when editing the CLI
 
 - Update parser behavior in `src/commands.ts` first.
 - Then update any user-visible text in `src/cli.tsx` and `README.md`.
 - If new options affect run behavior, make sure `src/agent/index.ts` and `src/credentials.tsx` still receive the right inputs.
-- If adding a provider, update `PROVIDER_CONFIGS` and `SELECTABLE_OPENWIKI_PROVIDERS` in `src/constants.ts`, `managedEnvKeys` in `src/env.ts`, and the `createModel` branch in `src/agent/index.ts`.
+- If adding a provider, update `PROVIDER_CONFIGS` and `SELECTABLE_OPENWIKI_PROVIDERS` in `src/constants.ts`, `managedEnvKeys` in `src/env.ts`, and the `createModel` branch in `src/agent/index.ts`. OAuth-based providers (like `openai-chatgpt`) additionally need a token refresh flow and a dedicated branch in `createModel` that reads tokens from `process.env`. `apiKeyEnvKey` is optional — a provider without one (like `vertex`) instead declares the env keys it needs (e.g. `projectEnvKey`), and `getMissingProviderEnvKey()` gates runs on whichever required key is absent.
 - To let a provider accept an alternative base URL, set `baseUrlEnvKey` on its `PROVIDER_CONFIGS` entry, add that key to `managedEnvKeys` in `src/env.ts`, and read it through `resolveProviderBaseUrl()` in the provider's `createModel` branch.
 - To require a user-supplied base URL (a provider with no default endpoint, like `openai-compatible`), also set `requiresBaseUrl: true`. `ensureProviderBaseUrl()` in `src/agent/index.ts` enforces it at runtime, and the interactive setup adds a base-URL step for such providers.
 - Re-check the `package.json` bin entry and scripts if the entrypoint changes.
@@ -136,6 +178,12 @@ The help content is centralized in `src/commands.ts` and is used by the CLI UI. 
 - `src/credentials.tsx`
 - `src/constants.ts`
 - `src/env.ts`
+- `src/agent/index.ts`
+- `src/agent/openai-chatgpt-oauth.ts`
+- `src/auth/oauth.ts`
+- `src/auth/providers.ts`
+- `src/auth/configure.ts`
+- `src/auth/ngrok.ts`
 - `README.md`
 - `package.json`
 - Git evidence: commits `ceded10`, `f89b05d`, `fd3a702`, `8278c36`, `0fa1430`

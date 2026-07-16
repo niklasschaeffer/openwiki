@@ -1,4 +1,5 @@
 export type OpenWikiCommand = "chat" | "init" | "update";
+export type OpenWikiOutputMode = "local-wiki" | "repository";
 
 export type OpenWikiRunResult = {
   command: OpenWikiCommand;
@@ -35,8 +36,10 @@ export type OpenWikiRunOptions = {
   isFollowup?: boolean;
   modelId?: string | null;
   onEvent?: (event: OpenWikiRunEvent) => void;
+  outputMode?: OpenWikiOutputMode;
   threadId?: string;
   userMessage?: string | null;
+  telemetryFile?: string;
 };
 
 export type UpdateMetadata = {
@@ -49,4 +52,5 @@ export type UpdateMetadata = {
 export type RunContext = {
   lastUpdate: UpdateMetadata | null;
   gitSummary: string;
+  wikiGoal?: string;
 };
