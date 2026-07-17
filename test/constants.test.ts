@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   DEFAULT_MODEL_ID,
   DEFAULT_PROVIDER_RETRY_ATTEMPTS,
+  DEFAULT_RECURSION_LIMIT,
   DEFAULT_PROVIDER,
   DEFAULT_VERTEX_LOCATION,
   getDefaultModelId,
@@ -24,6 +25,7 @@ import {
   resolveProviderLocation,
   resolveProviderRegion,
   resolveProviderRetryAttempts,
+  resolveRecursionLimit,
 } from "../src/constants.ts";
 
 describe("isValidModelId", () => {
@@ -196,6 +198,35 @@ describe("resolveProviderRetryAttempts", () => {
           OPENWIKI_PROVIDER_RETRY_ATTEMPTS: value,
         }),
       ).toThrow(/OPENWIKI_PROVIDER_RETRY_ATTEMPTS/u);
+    }
+  });
+});
+
+describe("resolveRecursionLimit", () => {
+  test("uses the OpenWiki default when no override is set", () => {
+    expect(resolveRecursionLimit({})).toBe(DEFAULT_RECURSION_LIMIT);
+  });
+
+  test("accepts positive integer recursion limits", () => {
+    expect(
+      resolveRecursionLimit({
+        OPENWIKI_RECURSION_LIMIT: "1",
+      }),
+    ).toBe(1);
+    expect(
+      resolveRecursionLimit({
+        OPENWIKI_RECURSION_LIMIT: " 50 ",
+      }),
+    ).toBe(50);
+  });
+
+  test("rejects invalid recursion limits", () => {
+    for (const value of ["", "   ", "0", "-1", "1.5", "abc", "1e2"]) {
+      expect(() =>
+        resolveRecursionLimit({
+          OPENWIKI_RECURSION_LIMIT: value,
+        }),
+      ).toThrow(/OPENWIKI_RECURSION_LIMIT/u);
     }
   });
 });

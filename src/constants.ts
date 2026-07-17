@@ -36,6 +36,8 @@ export const NEBIUS_BASE_URL = "https://api.tokenfactory.nebius.com/v1/";
 export const OPENWIKI_PROVIDER_RETRY_ATTEMPTS_ENV_KEY =
   "OPENWIKI_PROVIDER_RETRY_ATTEMPTS";
 export const DEFAULT_PROVIDER_RETRY_ATTEMPTS = 3;
+export const OPENWIKI_RECURSION_LIMIT_ENV_KEY = "OPENWIKI_RECURSION_LIMIT";
+export const DEFAULT_RECURSION_LIMIT = 100;
 export const OPENWIKI_GOOGLE_ACCESS_TOKEN_ENV_KEY =
   "OPENWIKI_GOOGLE_ACCESS_TOKEN";
 export const OPENWIKI_GOOGLE_CLIENT_ID_ENV_KEY = "OPENWIKI_GOOGLE_CLIENT_ID";
@@ -604,6 +606,34 @@ export function resolveProviderRetryAttempts(
   }
 
   return parsedRetryAttempts;
+}
+
+export function resolveRecursionLimit(
+  env: NodeJS.ProcessEnv = process.env,
+): number {
+  const raw = env[OPENWIKI_RECURSION_LIMIT_ENV_KEY];
+
+  if (raw === undefined) {
+    return DEFAULT_RECURSION_LIMIT;
+  }
+
+  const trimmed = raw.trim();
+
+  if (!/^[1-9]\d*$/u.test(trimmed)) {
+    throw new Error(
+      `Invalid ${OPENWIKI_RECURSION_LIMIT_ENV_KEY}. Expected a positive integer.`,
+    );
+  }
+
+  const parsed = Number(trimmed);
+
+  if (!Number.isSafeInteger(parsed)) {
+    throw new Error(
+      `Invalid ${OPENWIKI_RECURSION_LIMIT_ENV_KEY}. Expected a positive integer.`,
+    );
+  }
+
+  return parsed;
 }
 
 export function normalizeModelId(value: string): string {

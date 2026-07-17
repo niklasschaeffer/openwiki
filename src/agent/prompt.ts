@@ -43,6 +43,14 @@ Run discipline:
 - Keep the initial documentation set focused: quickstart plus the smallest set of section pages needed to explain the repo clearly.
 - ${output.searchBoundaryInstruction}
 
+Loop prevention:
+- Work in phases: discover → plan → write → verify. Do not restart discovery once you have moved to planning or writing.
+- Track what you have already inspected. If you are about to run the same command or read the same file a second time, stop — you already have that information.
+- Make one targeted discovery pass per area. If you find yourself listing the same directory or re-running git log without a new, specific question, you are looping. Stop and proceed to the next phase.
+- Process each tool result fully before issuing the next call. If a tool returned the information you need, use it — do not re-request it.
+- Do not begin a response with "I'll start by exploring" or "Let me start by exploring" more than once. The first discovery pass is enough; after that, you should be writing or editing.
+- If you are stuck or uncertain about a specific fact, make a targeted single read or grep, then proceed with the best available evidence. Do not loop on discovery as a way to resolve uncertainty.
+
 Connector ingestion discipline:
 - OpenWiki has built-in local connectors for git-repo, notion, x, google, web-search, hackernews, and slack. Use openwiki_list_connectors to inspect connector capabilities, config paths, required env var names, and raw data paths.
 - Scheduled and onboarding ingestion is orchestrated outside the agent with one source-specific update run per connector. If the user prompt includes raw data file paths for a source, inspect those files and do not call openwiki_ingest_all_connectors or ingest unrelated connectors.
@@ -280,6 +288,8 @@ Inspect the relevant evidence thoroughly, identify the major technical, business
 
 Start with ${output.quickstartPath} as the entrypoint. Then create section directories and pages that explain the subject in a way that is useful to both humans and future agents.
 
+Make one focused discovery pass, then write the plan and proceed to documentation. Do not loop on repeated exploration steps.
+
 Wiki brief:
 ${formatWikiGoal(context.wikiGoal)}
 
@@ -295,6 +305,8 @@ ${context.gitSummary}
 Update the existing OpenWiki documentation for ${output.subjectLabel}.
 
 Inspect ${output.docsLocation}, identify recent source changes or newly ingested connector evidence, and refresh only the documentation pages directly affected by those changes. Use the git evidence below when available. Keep edits surgical: do not rewrite accurate sections, do not update source maps or git evidence just to refresh them, and do not make formatting-only changes. If the wiki is already current, do not edit files. The CLI will update ${output.metadataPath} only when OpenWiki content changes.
+
+Make one focused discovery pass to identify what changed, then proceed to surgical edits. Do not loop on repeated exploration steps.
 
 Last update metadata:
 ${formatLastUpdate(context.lastUpdate)}

@@ -85,6 +85,7 @@ import {
   resolveProviderLocation,
   resolveProviderRegion,
   resolveProviderRetryAttempts,
+  resolveRecursionLimit,
   type OpenWikiProvider,
 } from "../constants.js";
 import {
@@ -274,11 +275,11 @@ async function runOpenWikiAgentCore(
     ],
   };
 
-  emitDebug(options, "stream=opening protocol=events version=v3");
   const stream = await agent.streamEvents(input, {
     configurable: {
       thread_id: threadId,
     },
+    recursionLimit: resolveRecursionLimit(),
     version: "v3",
   });
   emitDebug(options, "stream=started protocol=events version=v3");

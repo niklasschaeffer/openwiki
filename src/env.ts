@@ -51,7 +51,9 @@ import {
   OPENWIKI_MODEL_ID_ENV_KEY,
   OPENWIKI_PROVIDER_ENV_KEY,
   OPENWIKI_PROVIDER_RETRY_ATTEMPTS_ENV_KEY,
+  OPENWIKI_RECURSION_LIMIT_ENV_KEY,
   resolveProviderRetryAttempts,
+  resolveRecursionLimit,
 } from "./constants.js";
 import { isFileNotFoundError } from "./fs-errors.js";
 
@@ -109,6 +111,7 @@ export const MANAGED_ENV_KEYS = [
   OPENWIKI_PROVIDER_ENV_KEY,
   OPENWIKI_MODEL_ID_ENV_KEY,
   OPENWIKI_PROVIDER_RETRY_ATTEMPTS_ENV_KEY,
+  OPENWIKI_RECURSION_LIMIT_ENV_KEY,
   OPENWIKI_NOTION_TOKEN_ENV_KEY,
   OPENWIKI_NOTION_MCP_CLIENT_ID_ENV_KEY,
   OPENWIKI_NOTION_MCP_ACCESS_TOKEN_ENV_KEY,
@@ -257,7 +260,9 @@ function createCredentialDiagnostic(
           ? getProviderWarnings(value)
           : key === OPENWIKI_PROVIDER_RETRY_ATTEMPTS_ENV_KEY
             ? getRetryAttemptsWarnings(value)
-            : getCredentialWarnings(value),
+            : key === OPENWIKI_RECURSION_LIMIT_ENV_KEY
+              ? getRecursionLimitWarnings(value)
+              : getCredentialWarnings(value),
   };
 }
 
@@ -284,6 +289,7 @@ function isNonSecretDiagnosticKey(key: string): boolean {
   return (
     key === OPENWIKI_MODEL_ID_ENV_KEY ||
     key === OPENWIKI_PROVIDER_ENV_KEY ||
+    key === OPENWIKI_RECURSION_LIMIT_ENV_KEY ||
     key === OPENWIKI_PROVIDER_RETRY_ATTEMPTS_ENV_KEY ||
     key === ANTHROPIC_BASE_URL_ENV_KEY ||
     key === OPENAI_COMPATIBLE_BASE_URL_ENV_KEY ||
@@ -342,6 +348,18 @@ function getRetryAttemptsWarnings(value: string): string[] {
     return [];
   } catch {
     return ["invalid retry attempts"];
+  }
+}
+
+function getRecursionLimitWarnings(value: string): string[] {
+  try {
+    resolveRecursionLimit({
+      [OPENWIKI_RECURSION_LIMIT_ENV_KEY]: value,
+    });
+
+    return [];
+  } catch {
+    return ["invalid recursion limit"];
   }
 }
 
